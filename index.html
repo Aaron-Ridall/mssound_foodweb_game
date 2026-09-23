@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mississippi Sound and Bight Food Web Challenge — Dual Mode V6.0</title>
+<title>Mississippi Sound and Bight Food Web Challenge — Dual Mode V6.1</title>
 <style>
 :root{
   --ink:#183241;--muted:#56717b;--line:#c9d8dc;--panel:#ffffff;--soft:#f5faf9;
@@ -480,6 +480,63 @@ button.action{border:0; border-radius:12px; padding:11px 15px; font-weight:700; 
   .slider-grid{grid-template-columns:1fr}
 }
 
+
+.diet-line{
+  margin:5px 0 7px;
+  min-height:32px;
+  font-size:11px;
+  line-height:1.35;
+  color:#405c66;
+}
+.diet-line strong{color:#183241}
+.instructions-overlay{
+  position:fixed;
+  inset:0;
+  z-index:1900;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  padding:24px;
+  background:rgba(7,39,56,.68);
+  backdrop-filter:blur(4px);
+}
+.instructions-overlay.show{display:flex}
+.instructions-card{
+  width:min(720px,92vw);
+  padding:34px 30px;
+  border-radius:22px;
+  background:rgba(255,255,255,.96);
+  box-shadow:0 26px 80px rgba(0,0,0,.30);
+  text-align:center;
+}
+.instructions-card h2{
+  margin:0 0 18px;
+  padding:0;
+  border:0;
+  background:none;
+  font-size:clamp(28px,4vw,40px);
+  color:#156f78;
+}
+.instructions-placeholder{
+  margin:0 auto 24px;
+  max-width:590px;
+  font-size:20px;
+  line-height:1.55;
+  color:#183241;
+  white-space:pre-wrap;
+}
+.instructions-start{
+  border:0;
+  border-radius:12px;
+  padding:13px 22px;
+  background:#156f78;
+  color:#fff;
+  font-size:17px;
+  font-weight:700;
+  cursor:pointer;
+}
+.instructions-start:hover{background:#0d5760}
+
 </style>
 </head>
 <body>
@@ -496,8 +553,8 @@ button.action{border:0; border-radius:12px; padding:11px 15px; font-weight:700; 
 <section class="statusbar">
   <div class="instructions">
     <strong>Population rule:</strong> Environmental stress is applied first, then feeding and predation occur.
-    Producers can supply up to<br> <strong>2 grazing units per population</strong>, but stressful salinity or temperature can reduce survival.<br>
-    Surviving populations carry forward to the next year.
+    Producers can supply up to <strong>2 grazing units per population</strong>, but stressful salinity or temperature can reduce production.
+    Surviving populations carry forward to the next measured year.
   </div>
   <div class="stat"><span id="roundLabel">Round</span><br><span id="roundNum">1/10</span></div>
   <div class="stat">Additions left<br><span id="addsLeft">5</span></div>
@@ -527,7 +584,8 @@ button.action{border:0; border-radius:12px; padding:11px 15px; font-weight:700; 
         <span>Salinity</span>
         <span class="slider-value-wrap">
           <input id="salinityNumber" class="slider-number" type="number" min="0" max="40" step="0.1" value="20">
-           </span>
+          <span>PSU</span>
+        </span>
       </div>
       <input id="salinitySlider" type="range" min="0" max="40" step="0.1" value="20">
     </div>
@@ -616,6 +674,15 @@ button.action{border:0; border-radius:12px; padding:11px 15px; font-weight:700; 
   </div>
 </div>
 
+
+<div id="instructionsOverlay" class="instructions-overlay" role="dialog" aria-modal="true" aria-labelledby="instructionsTitle">
+  <div class="instructions-card">
+    <h2 id="instructionsTitle">Game Instructions</h2>
+    <div id="instructionsText" class="instructions-placeholder">At the start of every round, add five groups of organisms to your food web. Click the plus sign next to a group to add one population unit and the minus sign to remove a population unit. The plus sign will turn gray when you cannot add any more groups. Make sure to add enough food for your predators by looking at what your animals eat. When you have your food web built, click the Run Round button to earn points and then scroll down the page to see which organisms survived the year and which ones did not.</div>
+    <button id="instructionsStartBtn" class="instructions-start">Start</button>
+  </div>
+</div>
+
 <div id="gameEndOverlay" class="game-end-overlay" role="dialog" aria-modal="true" aria-labelledby="gameEndTitle">
   <div class="game-end-card">
     <h2 id="gameEndTitle">Congratulations!</h2>
@@ -657,7 +724,7 @@ const species=[
 {id:"gulf_menhaden",name:"Gulf menhaden",role:"Forage fish",order:2,eats:["zooplankton","phytoplankton"],img:IMG_MAP.gulf_menhaden},
 {id:"blue_crab",name:"Blue crab",role:"Omnivore",order:2.5,eats:["anchovy","brown_shrimp","eastern_oyster","zooplankton","seagrass"],img:IMG_MAP.blue_crab},
 {id:"red_drum",name:"Red drum",role:"Predator",order:3,eats:["gulf_menhaden","anchovy","brown_shrimp","blue_crab"],img:IMG_MAP.red_drum},
-{id:"spotted_seatrout",name:"Spotted seatrout",role:"Predator",order:3.5,eats:["red_drum","gulf_menhaden","anchovy","brown_shrimp","blue_crab"],img:IMG_MAP.spotted_seatrout},
+{id:"spotted_seatrout",name:"Spotted seatrout",role:"Predator",order:3.5,eats:["gulf_menhaden","anchovy","brown_shrimp","blue_crab"],img:IMG_MAP.spotted_seatrout},
 {id:"sharpnose_shark",name:"Atlantic sharpnose shark",role:"Apex predator",order:4,eats:["red_drum","spotted_seatrout","gulf_menhaden","brown_shrimp","blue_crab","anchovy"],img:IMG_MAP.sharpnose_shark},
 {id:"bull_shark",name:"Bull shark",role:"Apex predator",order:5,eats:["sharpnose_shark","red_drum","spotted_seatrout","brown_shrimp","anchovy","blue_crab","gulf_menhaden"],img:IMG_MAP.bull_shark}
 ];
@@ -713,7 +780,7 @@ const TOLERANCES={
     temperature:{min:2.2999,low:12.7999,high:28.6999,max:32.8}
   },
   eastern_oyster:{
-    salinity:{min:4.5,low:11.4,high:18.7,max:25},
+    salinity:{min:4.5,low:11.4,high:27.6,max:41.1},
     temperature:{min:4.6,low:21,high:29.8,max:38.4}
   },
   sharpnose_shark:{
@@ -721,7 +788,7 @@ const TOLERANCES={
     temperature:{min:12.59,low:19.181,high:27.767,max:31.3}
   },
   bull_shark:{
-    salinity:{min:19.16,low:32.1,high:36.23,max:39.08},
+    salinity:{min:0.5,low:12.3,high:29.9,max:34.8},
     temperature:{min:12.4,low:20.61,high:27.72,max:32.22}
   }
 };
@@ -777,6 +844,10 @@ const temperatureNumber=document.getElementById("temperatureNumber");
 const modeOverlay=document.getElementById("modeOverlay");
 const fullGameModeBtn=document.getElementById("fullGameModeBtn");
 const investigationModeBtn=document.getElementById("investigationModeBtn");
+const instructionsOverlay=document.getElementById("instructionsOverlay");
+const instructionsTitle=document.getElementById("instructionsTitle");
+const instructionsText=document.getElementById("instructionsText");
+const instructionsStartBtn=document.getElementById("instructionsStartBtn");
 
 function sum(obj){return Object.values(obj).reduce((a,b)=>a+b,0)}
 function totalCount(id){return populations[id]+pending[id]}
@@ -886,10 +957,19 @@ function selectMode(mode){
     empty.textContent="Build a starting food web with up to 10 population units, choose salinity and temperature, then run the investigation.";
   }
   render();
+
+  instructionsTitle.textContent=mode==="full"
+    ? "Full Food Web Game Instructions"
+    : "Temperature & Salinity Investigation Instructions";
+  instructionsText.innerHTML=mode==="full"
+    ? `At the start of every round, add five groups of organisms to your food web. <br><br>Click the plus sign next to a group to add one population unit and the minus sign to remove a population unit. The plus sign will turn gray when you cannot add any more groups. <br><br>Make sure to add enough food for your predators by looking at what your animals eat. <br><br>When you have your food web built, click the <strong>Run Round</strong> button to earn points and then scroll down the page to see which organisms survived the year and which ones did not.`
+    : `Add up to ten groups of organisms to your food web. <br><br>Click the plus sign next to a group to add one population unit and the minus sign to remove a population unit. The plus sign will turn gray when you cannot add any more groups. <br><br>Make sure to add enough food for your predators by looking at what your animals eat. <br><br>When you have your food web built, adjust the temperature and salinity slider to investigate what happens to the ecosystem when the water temperature or salinity change. <br><br>See what happens when the Mississippi Sound becomes fresh! What happens when the Mississippi Sound warms up?`;
+ instructionsOverlay.classList.add("show");
 }
 
 function showModeMenu(){
   gameEndOverlay.style.display="none";
+  instructionsOverlay.classList.remove("show");
   modeOverlay.style.display="flex";
 }
 
@@ -939,6 +1019,7 @@ function renderCards(){
       <div class="thumbWrap"><img class="thumb" src="${s.img}" alt="${s.name}"></div>
       <div class="card-name">${s.name}</div>
       <div class="card-role">${s.role}</div>
+      <div class="diet-line"><strong>Eats:</strong> ${s.eats.length?s.eats.map(id=>byId[id].name).join(", "):"none"}</div>
       <div class="env-badge ${assessment.status.css}">${badgeText}</div>
       <div class="popline">${populationText}</div>
       <div class="controls">
@@ -991,7 +1072,7 @@ function updateSwimSpan(){
 
 function getMotionClass(id){
   if(id==="seagrass" || id==="eastern_oyster")return "stationary";
-  if(id==="zooplankton")return "drift-zooplankton";
+  if(id==="zooplankton" || id==="phytoplankton")return "drift-zooplankton";
   if(id==="blue_crab")return "crawl-crab";
   if(id==="brown_shrimp")return "swim-shrimp";
   if(["anchovy","gulf_menhaden","red_drum","spotted_seatrout","sharpnose_shark","bull_shark"].includes(id))return "swim-fish-right";
@@ -1458,6 +1539,7 @@ restoreInvestigationBtn.onclick=restoreInvestigationBase;
 playAgainBtn.onclick=()=>selectMode("full");
 fullGameModeBtn.onclick=()=>selectMode("full");
 investigationModeBtn.onclick=()=>selectMode("investigation");
+instructionsStartBtn.onclick=()=>instructionsOverlay.classList.remove("show");
 
 salinitySlider.addEventListener("input",e=>setCustomSalinity(e.target.value));
 salinityNumber.addEventListener("change",e=>setCustomSalinity(e.target.value));
