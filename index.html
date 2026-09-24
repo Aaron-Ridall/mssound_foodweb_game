@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mississippi Sound and Bight Food Web Challenge — Dual Mode V6.3</title>
+<title>Mississippi Sound and Bight Food Web Challenge — Dual Mode V6.7</title>
 <style>
 :root{
   --ink:#183241;--muted:#56717b;--line:#c9d8dc;--panel:#ffffff;--soft:#f5faf9;
@@ -709,7 +709,23 @@ const IMG_MAP={
 };
 
 const ADDITIONS_PER_ROUND=5;
-const MAX_PER_SPECIES=10;
+const MAX_SINGLETON_SPECIES=10;
+const MAX_BUNDLED_SPECIES=30;
+
+const SINGLETON_ADDITIONS=new Set([
+  "red_drum",
+  "spotted_seatrout",
+  "sharpnose_shark",
+  "bull_shark"
+]);
+
+function populationIncrement(id){
+  return SINGLETON_ADDITIONS.has(id)?1:3;
+}
+
+function maxPopulationUnits(id){
+  return SINGLETON_ADDITIONS.has(id)?MAX_SINGLETON_SPECIES:MAX_BUNDLED_SPECIES;
+}
 const MAX_ROUNDS=10;
 const PRODUCER_GRAZING_UNITS=2;
 
@@ -953,7 +969,7 @@ function selectMode(mode){
     resetBtn.textContent="Build New Food Web";
     resultsTitle.textContent="Investigation results";
     hint.innerHTML="<strong>Investigation strategy:</strong> Build a balanced starting web, then change one environmental variable at a time to compare outcomes.";
-    empty.textContent="Build a starting food web with up to 10 population units, choose salinity and temperature, then run the investigation.";
+    empty.textContent="Build a starting food web with up to 10 organism-group additions, choose salinity and temperature, then run the investigation.";
   }
   render();
 
@@ -961,8 +977,8 @@ function selectMode(mode){
     ? "Full Food Web Game Instructions"
     : "Temperature & Salinity Investigation Instructions";
   instructionsText.innerHTML=mode==="full"
-    ? `At the start of every round, add five groups of organisms to your food web. <br><br>Click the plus sign next to a group to add one population unit and the minus sign to remove a population unit. The plus sign will turn gray when you cannot add any more groups. <br><br>Make sure to add enough food for your predators by looking at what your animals eat. <br><br>When you have your food web built, click the <strong>Run Round</strong> button to earn points and then scroll down the page to see which organisms survived the year and which ones did not.`
-    : `Add up to ten groups of organisms to your food web. <br><br>Click the plus sign next to a group to add one population unit and the minus sign to remove a population unit. The plus sign will turn gray when you cannot add any more groups. <br><br>Make sure to add enough food for your predators by looking at what your animals eat. <br><br>When you have your food web built, adjust the temperature and salinity slider to investigate what happens to the ecosystem when the water temperature or salinity change.;
+    ? `At the start of every round, add five groups of organisms to your food web. <br><br>For most organisms, each <strong>+</strong> click adds three population units. Red drum, spotted seatrout, Atlantic sharpnose sharks, and bull sharks are added one population unit at a time. Use the minus button to remove the same amount you just added. The plus sign will turn gray when you cannot add any more groups. <br><br>Make sure to add enough food for your predators by looking at what your animals eat. <br><br>When you have your food web built, click the <strong>Run Round</strong> button to earn points and then scroll down the page to see which organisms survived the year and which ones did not.`
+    : `Add up to ten groups of organisms to your food web. <br><br>For most organisms, each <strong>+</strong> click adds three population units. Red drum, spotted seatrout, Atlantic sharpnose sharks, and bull sharks are added one population unit at a time. Use the minus button to remove the same amount you just added. The plus sign will turn gray when you cannot add any more groups. <br><br>Make sure to add enough food for your predators by looking at what your animals eat. <br><br>When you have your food web built, adjust the temperature and salinity slider to investigate what happens to the ecosystem when the water temperature or salinity change.`;
  instructionsOverlay.classList.add("show");
 }
 
@@ -975,8 +991,13 @@ function showModeMenu(){
 function addPopulation(id){
   if(gameOver)return;
   if(gameMode==="investigation" && investigationBase)return;
-  if(addsUsed>=additionsLimit() || totalCount(id)>=MAX_PER_SPECIES)return;
-  pending[id]++;
+
+  const amount=populationIncrement(id);
+  const maxUnits=maxPopulationUnits(id);
+
+  if(addsUsed>=additionsLimit() || totalCount(id)+amount>maxUnits)return;
+
+  pending[id]+=amount;
   addsUsed++;
   lastRound=null;
   roundSummary.style.display="none";
@@ -988,7 +1009,9 @@ function removePending(id){
   if(gameOver)return;
   if(gameMode==="investigation" && investigationBase)return;
   if(pending[id]<=0)return;
-  pending[id]--;
+
+  const amount=populationIncrement(id);
+  pending[id]=Math.max(0,pending[id]-amount);
   addsUsed--;
   render();
 }
@@ -1001,7 +1024,8 @@ function renderCards(){
     const card=document.createElement("div");
     card.className="card"+(totalCount(s.id)>0?" has-pop":"");
     const webEditable=gameMode!=="investigation" || !investigationBase;
-    const canAdd=!gameOver && webEditable && addsUsed<additionsLimit() && totalCount(s.id)<MAX_PER_SPECIES;
+    const addAmount=populationIncrement(s.id);
+    const canAdd=!gameOver && webEditable && addsUsed<additionsLimit() && totalCount(s.id)+addAmount<=maxPopulationUnits(s.id);
     const canRemove=webEditable && pending[s.id]>0;
     const badgeText=assessment.overall>=.999
       ? assessment.status.label
@@ -1132,6 +1156,37 @@ function getFishDuration(id){
   return "18s";
 }
 
+function getPopulationOffsets(count,id){
+  if(count<=1)return [{x:0,y:0,scale:1}];
+
+  const offsets=[];
+  const size=getNodeImageSize(id);
+
+  // Keep groups compact enough that arrows and neighboring trophic levels
+  // remain readable. Larger groups use progressively smaller icons.
+  let scale=1;
+  if(count>=4)scale=.82;
+  if(count>=7)scale=.70;
+  if(count>=13)scale=.60;
+
+  const cols=Math.ceil(Math.sqrt(count));
+  const rows=Math.ceil(count/cols);
+  const xStep=Math.max(18,size.w*scale*.38);
+  const yStep=Math.max(14,size.h*scale*.32);
+
+  for(let i=0;i<count;i++){
+    const row=Math.floor(i/cols);
+    const col=i%cols;
+    const itemsThisRow=Math.min(cols,count-row*cols);
+    const rowWidth=(itemsThisRow-1)*xStep;
+    const x=col*xStep-rowWidth/2;
+    const y=(row-(rows-1)/2)*yStep;
+    offsets.push({x,y,scale});
+  }
+
+  return offsets;
+}
+
 function renderWeb(){
   svg.innerHTML="";
   const ids=species.map(s=>s.id).filter(id=>totalCount(id)>0);
@@ -1191,25 +1246,35 @@ function renderWeb(){
     const s=byId[id],p=pos[id];
     const g=addSvg("g",{class:`node ${pending[id]>0?"pending":""}`});
     const motionClass=getMotionClass(id);
-    const size=getNodeImageSize(id);
+    const baseSize=getNodeImageSize(id);
     const yOffset=getImageYOffset(id);
+    const count=totalCount(id);
+    const offsets=getPopulationOffsets(count,id);
 
-    const image=addSvg("image",{
-      href:s.img,
-      x:p.x-size.w/2,
-      y:p.y-size.h/2+yOffset,
-      width:size.w,
-      height:size.h,
-      preserveAspectRatio:"xMidYMid meet",
-      class:`node-img ${motionClass}`
-    },g);
-    image.style.setProperty("--fish-duration",getFishDuration(id));
-    image.setAttributeNS("http://www.w3.org/1999/xlink","href",s.img);
+    offsets.forEach((offset,i)=>{
+      const w=baseSize.w*offset.scale;
+      const h=baseSize.h*offset.scale;
+      const image=addSvg("image",{
+        href:s.img,
+        x:p.x+offset.x-w/2,
+        y:p.y+offset.y-h/2+yOffset,
+        width:w,
+        height:h,
+        preserveAspectRatio:"xMidYMid meet",
+        class:`node-img ${motionClass}`
+      },g);
 
-    const ct=addSvg("text",{x:p.x,y:p.y+52,class:"count"},g);
-    ct.textContent=totalCount(id);
+      // Slightly stagger animation timing so groups do not move as one solid block.
+      image.style.setProperty("--fish-duration",getFishDuration(id));
+      image.style.animationDelay=`${-(i%7)*0.7}s`;
+      image.setAttributeNS("http://www.w3.org/1999/xlink","href",s.img);
+    });
 
-    const label=addSvg("text",{x:p.x,y:p.y+80,class:"label"},g);
+    const labelY=p.y+Math.max(80,baseSize.h*.55+45);
+    const ct=addSvg("text",{x:p.x,y:labelY-28,class:"count"},g);
+    ct.textContent=count;
+
+    const label=addSvg("text",{x:p.x,y:labelY,class:"label"},g);
     const words=s.name.split(" ");
     if(s.name.length>18&&words.length>1){
       const cut=Math.ceil(words.length/2);
@@ -1232,11 +1297,23 @@ function choosePrey(consumer,available,producerFood){
   });
   if(candidates.length===0)return null;
 
+  // Feeding preference:
+  // 1. Prefer the available prey at the highest trophic level.
+  // 2. Within that trophic level, prefer the prey with the highest abundance.
+  // 3. If trophic level and abundance are tied, preserve the original diet-list order.
+  const originalOrder=Object.fromEntries(consumer.eats.map((id,i)=>[id,i]));
+
   candidates.sort((a,b)=>{
-    const aa=byId[a].order===0?(producerFood[a]||0):(available[a]||0);
-    const bb=byId[b].order===0?(producerFood[b]||0):(available[b]||0);
-    return bb-aa;
+    const trophicDifference=byId[b].order-byId[a].order;
+    if(trophicDifference!==0)return trophicDifference;
+
+    const abundanceA=byId[a].order===0?(producerFood[a]||0):(available[a]||0);
+    const abundanceB=byId[b].order===0?(producerFood[b]||0):(available[b]||0);
+    if(abundanceB!==abundanceA)return abundanceB-abundanceA;
+
+    return originalOrder[a]-originalOrder[b];
   });
+
   return candidates[0];
 }
 
@@ -1403,7 +1480,13 @@ function runRound(){
   const lostEaten=sum(sim.eaten);
   const represented=species.filter(s=>populations[s.id]>0).length;
   const activeLinks=Object.values(sim.usedByLink).filter(v=>v>0).length;
-  const roundScore=survivingTotal*15+represented*50+activeLinks*25;
+  // Survival scoring is normalized for bundled +3 organisms:
+  // bundled groups earn 5 points per surviving unit, while singleton groups earn 15.
+  const survivalPoints=species.reduce((total,s)=>{
+    const pointsPerUnit=populationIncrement(s.id)===3?5:15;
+    return total+populations[s.id]*pointsPerUnit;
+  },0);
+  const roundScore=survivalPoints+represented*50+activeLinks*25;
   cumulativeScore+=roundScore;
 
   scoreEl.textContent=cumulativeScore;
